@@ -1,426 +1,559 @@
-/* Utility: random */
-const rand = (min, max) => Math.random() * (max - min) + min;
-
-/* Cursor particles canvas */
-const cursorCanvas = document.getElementById('canvas-cursor');
-const cursorCtx = cursorCanvas.getContext('2d');
-let cursorParticles = [];
-function resizeCanvases() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  [cursorCanvas, confettiCanvas, fireworksCanvas].forEach((c) => {
-    if (!c) return;
-    const rect = c.getBoundingClientRect();
-    c.width = rect.width * dpr;
-    c.height = rect.height * dpr;
-    const ctx = c.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  });
-}
-
-/* Confetti canvas */
-const confettiCanvas = document.getElementById('canvas-confetti');
-const confettiCtx = confettiCanvas.getContext('2d');
-let confettiPieces = [];
-let confettiRainRate = 0; // pieces per second, adjusted based on performance
-
-/* Fireworks canvas */
-const fireworksCanvas = document.getElementById('canvas-fireworks');
-const fireworksCtx = fireworksCanvas.getContext('2d');
-let fireworks = [];
-
-/* Sparkles floating */
-const sparklesContainer = document.getElementById('sparkles');
-
-/* Balloons */
-const balloonsContainer = document.getElementById('balloons');
-
-/* Hearts */
-const heartsContainer = document.getElementById('hearts');
-const giftsContainer = document.getElementById('gifts');
-
-/* Typewriter */
-const typewriterEl = document.getElementById('typewriter');
-const specialMessage = document.getElementById('special-message');
-
-/* Buttons */
-const magicButton = document.getElementById('magic-button');
-const musicButton = document.getElementById('music-button');
-const welcomeOverlay = document.getElementById('welcome-overlay');
-const startButton = document.getElementById('start-button');
-
-/* Title editable attribute (optional editing) */
-const mainTitle = document.getElementById('main-title');
-mainTitle.setAttribute('contenteditable', 'true');
-mainTitle.setAttribute('spellcheck', 'false');
-mainTitle.title = 'Haz clic para editar el mensaje';
-
-/* Day/Night based on local time */
-function applyAutoTheme() {
-  const hour = new Date().getHours();
-  const isNight = hour < 7 || hour >= 20;
-  document.body.classList.toggle('night', isNight);
-}
-
-/* Sparkles initial */
-function spawnSparkles(count = 24) {
-  for (let i = 0; i < count; i++) {
-    const el = document.createElement('div');
-    el.className = 'sparkle';
-    el.style.left = `${Math.random() * 100}%`;
-    el.style.top = `${Math.random() * 100}%`;
-    el.style.animationDelay = `${Math.random() * 4}s`;
-    sparklesContainer.appendChild(el);
-  }
-}
-
-/* Balloons spawn */
-const balloonColors = ['#f9a8d4', '#fde68a', '#fbcfe8', '#fef3c7', '#e9d5ff'];
-function spawnBalloons(count = 10) {
-  const vw = window.innerWidth;
-  for (let i = 0; i < count; i++) {
-    const b = document.createElement('div');
-    b.className = 'balloon';
-    const color = balloonColors[i % balloonColors.length];
-    b.style.background = `radial-gradient(circle at 30% 30%, ${color}, ${color} 60%, rgba(0,0,0,0.05))`;
-    b.style.left = `${Math.random() * (vw - 60)}px`;
-    const duration = rand(18, 28);
-    b.style.animationDuration = `${duration}s`;
-    b.style.opacity = String(rand(0.85, 1));
-    balloonsContainer.appendChild(b);
-  }
-}
-
-/* Hearts on click */
-function spawnHeart(x, y) {
-  const h = document.createElement('div');
-  h.className = 'heart animate';
-  h.style.left = `${x - 7}px`;
-  h.style.top = `${y - 7}px`;
-  h.style.background = `hsl(${Math.floor(rand(330, 360))}, 90%, 70%)`;
-  heartsContainer.appendChild(h);
-  setTimeout(() => h.remove(), 1200);
-}
-document.addEventListener('click', (e) => {
-  spawnHeart(e.clientX, e.clientY);
-});
-
-/* Cursor particles trail */
-document.addEventListener('mousemove', (e) => {
-  cursorParticles.push({ x: e.clientX, y: e.clientY, vx: rand(-0.5, 0.5), vy: rand(-0.5, -1.2), life: 1, size: rand(1.5, 3), hue: rand(320, 360) });
-});
-
-function updateCursorParticles(dt) {
-  cursorCtx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
-  const gravity = 0.01;
-  cursorParticles = cursorParticles.filter((p) => p.life > 0);
-  for (const p of cursorParticles) {
-    p.x += p.vx * 16 * dt; p.y += p.vy * 16 * dt; p.vy += gravity;
-    p.life -= dt * 0.8;
-    cursorCtx.fillStyle = `hsla(${p.hue}, 90%, 75%, ${Math.max(p.life, 0)})`;
-    cursorCtx.beginPath();
-    cursorCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    cursorCtx.fill();
-  }
-}
-
-/* Confetti rain */
-function spawnConfettiBurst({ x, y, count = 120 } = {}) {
-  // Pink palette
-  const colors = ['#ffc0d9', '#f9a8d4', '#f472b6', '#fda4af', '#fecdd3', '#ffe4ef', '#ffd1e8'];
-  for (let i = 0; i < count; i++) {
-    const angle = rand(-Math.PI, 0);
-    confettiPieces.push({
-      x: x ?? window.innerWidth / 2,
-      y: y ?? window.innerHeight / 2,
-      vx: Math.cos(angle) * rand(2, 6),
-      vy: Math.sin(angle) * rand(2, 6),
-      size: rand(3, 6),
-      color: colors[i % colors.length],
-      life: rand(1.2, 2.2),
-      rotation: rand(0, Math.PI * 2),
-      rotationSpeed: rand(-0.2, 0.2)
-    });
-  }
-}
-
-function updateConfetti(dt) {
-  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-  const g = 0.05;
-  confettiPieces = confettiPieces.filter((p) => p.life > 0 && p.y < window.innerHeight + 40);
-  for (const p of confettiPieces) {
-    p.x += p.vx * 16 * dt;
-    p.y += p.vy * 16 * dt;
-    p.vy += g;
-    p.rotation += p.rotationSpeed;
-    p.life -= dt * 0.3;
-    confettiCtx.save();
-    confettiCtx.translate(p.x, p.y);
-    confettiCtx.rotate(p.rotation);
-    confettiCtx.fillStyle = p.color;
-    confettiCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-    confettiCtx.restore();
-  }
-}
-
-/* Confetti gentle rain from top */
-let confettiSpawnAccumulator = 0;
-function spawnConfettiRain(dt) {
-  confettiSpawnAccumulator += dt * confettiRainRate;
-  // Pink palette
-  const colors = ['#ffc0d9', '#f9a8d4', '#f472b6', '#fda4af', '#fecdd3', '#ffe4ef', '#ffd1e8'];
-  while (confettiSpawnAccumulator >= 1) {
-    confettiSpawnAccumulator -= 1;
-    const x = Math.random() * window.innerWidth;
-    confettiPieces.push({
-      x,
-      y: -10,
-      vx: rand(-0.6, 0.6),
-      vy: rand(1.4, 2.6),
-      size: rand(3, 6),
-      color: colors[Math.floor(Math.random() * colors.length)],
-      life: rand(2.2, 3.5),
-      rotation: rand(0, Math.PI * 2),
-      rotationSpeed: rand(-0.15, 0.15)
-    });
-  }
-}
-
-/* Fireworks temporary effect */
-function launchFireworks() {
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  for (let j = 0; j < 6; j++) {
-    const parts = [];
-    const hue = rand(0, 360);
-    for (let i = 0; i < 60; i++) {
-      const angle = (i / 60) * Math.PI * 2;
-      parts.push({ x: cx, y: cy, vx: Math.cos(angle) * rand(2, 4), vy: Math.sin(angle) * rand(2, 4), life: rand(1, 1.6), hue });
-    }
-    fireworks.push(parts);
-  }
-  fireworksCanvas.classList.add('show');
-  setTimeout(() => fireworksCanvas.classList.remove('show'), 3500);
-}
-
-function updateFireworks(dt) {
-  fireworksCtx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
-  const drag = 0.99, g = 0.02;
-  fireworks = fireworks.filter(parts => parts.some(p => p.life > 0));
-  for (const parts of fireworks) {
-    for (const p of parts) {
-      p.x += p.vx * 16 * dt;
-      p.y += p.vy * 16 * dt;
-      p.vx *= drag; p.vy = p.vy * drag + g;
-      p.life -= dt * 0.5;
-      fireworksCtx.fillStyle = `hsla(${p.hue}, 100%, 70%, ${Math.max(p.life, 0)})`;
-      fireworksCtx.fillRect(p.x, p.y, 2, 2);
-    }
-  }
-}
-
-/* Gallery reveal */
-function setupGalleryReveal() {
-  const items = document.querySelectorAll('.gallery-item');
-  const obs = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('revealed'); });
-  }, { threshold: 0.2 });
-  items.forEach(i => obs.observe(i));
-}
-
-/* Typewriter logic with cancellation to handle repeated clicks safely */
-const messageText = "Gracias por tus abrazos que me reconfortan, tus consejos que me guían y tus sonrisas que alegran mi vida.\nEres mi fuerza, mi ejemplo y mi mayor bendición.\nCada día contigo es un regalo lleno de amor, enseñanzas y momentos inolvidables.\nTu dedicación y cariño me inspiran a ser mejor y a valorar lo que realmente importa.\nTe amo profundamente mamá, siempre serás mi refugio y mi luz ❤️";
-let typewriterToken = 0;
-async function runTypewriter(text) {
-  const myToken = ++typewriterToken; // cancel any previous run
-  typewriterEl.textContent = '';
-  for (let i = 0; i < text.length; i++) {
-    if (myToken !== typewriterToken) return; // another run started
-    typewriterEl.textContent += text[i];
-    await new Promise(r => setTimeout(r, text[i] === '\n' ? 250 : rand(18, 38)));
-  }
-}
-
-/* YouTube background player */
-let ytPlayer;
-window.onYouTubeIframeAPIReady = function() {
-  ytPlayer = new YT.Player('player', {
-    videoId: 'VP7QLzPzXvQ',
-    playerVars: {
-      playsinline: 1,
-      autoplay: 1, // start immediately (muted to satisfy policies)
-      controls: 0,
-      loop: 1,
-      mute: 1,
-      rel: 0,
-      modestbranding: 1,
-      origin: window.location.origin,
-    },
-    events: {
-      onReady: () => {
-        try {
-          ytPlayer.mute();
-          ytPlayer.setVolume(70);
-          ytPlayer.playVideo();
-        } catch {}
-        // Unmute on first user interaction
-        const unmuteOnce = () => {
-          try { ytPlayer.unMute(); ytPlayer.setVolume(70); } catch {}
-          window.removeEventListener('pointerdown', unmuteOnce);
-          window.removeEventListener('keydown', unmuteOnce);
-        };
-        window.addEventListener('pointerdown', unmuteOnce, { once: true });
-        window.addEventListener('keydown', unmuteOnce, { once: true });
-      }
-    }
-  });
+// Configuración: 1 billete por día, 7 meses (210 días). 1 de $50k cada 7 casillas (semana).
+const SAVING_CONFIG = {
+    goal: 5_000_000,
+    monthsToGoal: 7,
+    daysPerMonth: 30,
+    denominations: [
+        { value: 50_000, count: 30 },   // 1 por semana = 1.500.000
+        { value: 20_000, count: 172 }, // 3.440.000
+        { value: 10_000, count: 4 },   // 40.000
+        { value: 5_000, count: 4 }     // 20.000   → total 5.000.000
+    ],
+    storageKey: "esquemaAhorroState"
 };
 
-function handleVisibility() {
-  if (!ytPlayer) return;
-  const visible = !document.hidden;
-  try {
-    if (visible) {
-      // Do not auto-play unless started before
-      // noop
-    } else {
-      ytPlayer.pauseVideo && ytPlayer.pauseVideo();
-    }
-  } catch {}
-}
-document.addEventListener('visibilitychange', handleVisibility);
+const totalDays = SAVING_CONFIG.monthsToGoal * SAVING_CONFIG.daysPerMonth;
+const totalBills = SAVING_CONFIG.denominations.reduce((sum, d) => sum + d.count, 0);
 
-/* Music button */
-musicButton.addEventListener('click', () => {
-  try {
-    if (!ytPlayer) return;
-    const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : undefined;
-    // If not playing, play and unmute
-    if (state !== YT.PlayerState.PLAYING) {
-      ytPlayer.playVideo();
-      ytPlayer.unMute();
-      ytPlayer.setVolume(70);
-      return;
-    }
-    // If playing but muted, unmute
-    if (ytPlayer.isMuted && ytPlayer.isMuted()) {
-      ytPlayer.unMute();
-      ytPlayer.setVolume(70);
-      return;
-    }
-    // If playing and unmuted, pause
-    ytPlayer.pauseVideo();
-  } catch {}
-});
-
-/* Welcome overlay start */
-function startExperience() {
-  try {
-    if (ytPlayer) {
-      ytPlayer.playVideo();
-      ytPlayer.unMute();
-      ytPlayer.setVolume(70);
-    }
-  } catch {}
-  if (welcomeOverlay) {
-    welcomeOverlay.classList.add('overlay-hide');
-    setTimeout(() => { welcomeOverlay.style.display = 'none'; }, 520);
-  }
-}
-if (startButton) {
-  startButton.addEventListener('click', startExperience);
-}
-// Also allow tapping anywhere on overlay to start
-if (welcomeOverlay) {
-  welcomeOverlay.addEventListener('pointerdown', (e) => {
-    // avoid double if the button caught it
-    if (e.target === welcomeOverlay) startExperience();
-  });
-}
-
-/* Magic button actions */
-let surpriseShown = false;
-magicButton.addEventListener('click', () => {
-  if (!surpriseShown) {
-    specialMessage.classList.remove('hidden');
-    // Start visual effects immediately
-    spawnConfettiBurst();
-    launchFireworks();
-    rainGiftsAndBoostConfetti();
-    // Run typewriter in background; mark as shown when finishes (only if not cancelled)
-    const myToken = typewriterToken + 1;
-    runTypewriter(messageText).then(() => {
-      if (typewriterToken === myToken) {
-        surpriseShown = true;
-      }
+function formatCurrency(value) {
+    return value.toLocaleString("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0
     });
-  } else {
-    // Re-run typewriter quickly when clicked again
-    runTypewriter(messageText);
-    spawnConfettiBurst();
-    launchFireworks();
-    rainGiftsAndBoostConfetti();
-  }
+}
+
+function loadState() {
+    try {
+        const raw = localStorage.getItem(SAVING_CONFIG.storageKey);
+        if (!raw) return { activeTiles: {}, billOrder: null, hideTotal: false, cashSoundDataUrl: null };
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== "object") {
+            return { activeTiles: {}, billOrder: null, hideTotal: false, cashSoundDataUrl: null };
+        }
+        const activeTiles = parsed.activeTiles && typeof parsed.activeTiles === "object" ? parsed.activeTiles : {};
+        const billOrder = Array.isArray(parsed.billOrder) ? parsed.billOrder : null;
+        const hideTotal = typeof parsed.hideTotal === "boolean" ? parsed.hideTotal : false;
+        const cashSoundDataUrl = typeof parsed.cashSoundDataUrl === "string" ? parsed.cashSoundDataUrl : null;
+        return { activeTiles, billOrder, hideTotal, cashSoundDataUrl };
+    } catch {
+        return { activeTiles: {}, billOrder: null, hideTotal: false, cashSoundDataUrl: null };
+    }
+}
+
+function saveState(state) {
+    try {
+        localStorage.setItem(SAVING_CONFIG.storageKey, JSON.stringify(state));
+    } catch {
+        // Si localStorage falla (modo incógnito, etc.), simplemente no persistimos.
+    }
+}
+
+// Cada 7 casillas = 1 semana. La casilla 7, 14, 21, 28… es siempre $50k (1 billete pesado por semana).
+function buildSpreadBillOrder() {
+    const n = SAVING_CONFIG.denominations.reduce((sum, d) => sum + d.count, 0);
+    const slots = new Array(n).fill(null);
+    const daysPerWeek = 7;
+
+    // La última casilla de cada semana (la 7.ª, 14.ª, 21.ª…) es el billete de $50k
+    const fiftyKCount = SAVING_CONFIG.denominations.find((d) => d.value === 50_000)?.count ?? 0;
+    for (let w = 0; w < fiftyKCount; w++) {
+        const pos = (w + 1) * daysPerWeek - 1; // casilla 7, 14, 21, 28… (índice 6, 13, 20, 27…)
+        slots[pos] = 50_000;
+    }
+
+    // Índices que no son de $50k
+    let availableIndices = [];
+    for (let i = 0; i < n; i++) {
+        if (slots[i] !== 50_000) availableIndices.push(i);
+    }
+
+    // Repartir el resto de denominaciones (20k, 10k, 5k) de forma uniforme en esos días
+    SAVING_CONFIG.denominations.forEach((denom) => {
+        if (denom.value === 50_000 || denom.count === 0) return;
+
+        const count = denom.count;
+        const numAvailable = availableIndices.length;
+        const toUse = [];
+        for (let i = 0; i < count; i++) {
+            const idx = count === 1
+                ? 0
+                : Math.round((i * (numAvailable - 1)) / (count - 1));
+            toUse.push(availableIndices[idx]);
+        }
+
+        toUse.forEach((pos) => { slots[pos] = denom.value; });
+        availableIndices = availableIndices.filter((p) => !toUse.includes(p));
+    });
+
+    return slots;
+}
+
+function getBillOrder(state) {
+    const totalCount = SAVING_CONFIG.denominations.reduce((sum, d) => sum + d.count, 0);
+    if (state.billOrder && state.billOrder.length === totalCount) {
+        return state.billOrder;
+    }
+    const denomPool = buildSpreadBillOrder();
+    state.billOrder = denomPool.slice();
+    saveState(state);
+    return denomPool;
+}
+
+function buildTiles(state) {
+    const grid = document.getElementById("all-bills-grid");
+    if (!grid) return;
+
+    const denomPool = getBillOrder(state);
+
+    denomPool.forEach((denomValue, index) => {
+        const tileNumber = index + 1;
+        const tileId = `bill-${tileNumber}`;
+
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "bill-tile inactive";
+        tile.dataset.tileId = tileId;
+        tile.dataset.value = String(denomValue);
+        tile.dataset.denomination = String(denomValue);
+
+        const img = document.createElement("img");
+        img.className = "bill-img";
+        img.alt = formatCurrency(denomValue);
+        img.loading = "lazy";
+        img.onerror = function () {
+            if (img.src.endsWith(".png")) {
+                img.src = `billetes/${denomValue}.jpg`;
+            } else {
+                img.classList.add("bill-img-error");
+            }
+        };
+        img.src = `billetes/${denomValue}.png`;
+        tile.appendChild(img);
+
+        const label = document.createElement("span");
+        label.className = "bill-label";
+        label.textContent = `#${tileNumber}`;
+
+        tile.appendChild(label);
+
+        if (state.activeTiles[tileId]) {
+            tile.classList.remove("inactive");
+            tile.classList.add("active");
+        }
+
+        grid.appendChild(tile);
+    });
+}
+
+function calculateTotalFromDOM() {
+    const tiles = document.querySelectorAll(".bill-tile.active");
+    let total = 0;
+    tiles.forEach((tile) => {
+        const value = Number(tile.dataset.value || 0);
+        if (!Number.isNaN(value)) {
+            total += value;
+        }
+    });
+    return total;
+}
+
+function updateSectionSummaries() {
+    const summaryEl = document.getElementById("overall-summary");
+    if (!summaryEl) return;
+
+    const totalTiles = document.querySelectorAll(".bill-tile").length;
+    const activeTiles = document.querySelectorAll(".bill-tile.active").length;
+
+    summaryEl.textContent = `${activeTiles} de ${totalTiles} billetes ahorrados`;
+}
+
+function updateTodayDate() {
+    const el = document.getElementById("today-date");
+    if (!el) return;
+
+    const now = new Date();
+    el.textContent = now.toLocaleDateString("es-CO", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    });
+}
+
+function updateDailyGoalDisplay() {
+    const el = document.getElementById("daily-goal");
+    if (!el) return;
+    el.textContent = "1 billete por día";
+}
+
+function getMotivationText(percentage) {
+    if (percentage === 0) {
+        return "Empieza marcando tu primer billete y mira cómo crece tu ahorro.";
+    }
+    if (percentage > 0 && percentage < 25) {
+        return "Buen comienzo, la clave es la constancia.";
+    }
+    if (percentage >= 25 && percentage < 50) {
+        return "Vas tomando ritmo, sigue así.";
+    }
+    if (percentage >= 50 && percentage < 75) {
+        return "Ya superaste la mitad de tu meta, no pares.";
+    }
+    if (percentage >= 75 && percentage < 100) {
+        return "Estás muy cerca, cada billete cuenta mucho ahora.";
+    }
+    return "Meta alcanzada. Si quieres, puedes seguir ahorrando aún más.";
+}
+
+function updateUI(total) {
+    const totalAmountEl = document.getElementById("total-amount");
+    const progressFillEl = document.getElementById("progress-fill");
+    const progressPercentEl = document.getElementById("progress-percent");
+    const motivationEl = document.getElementById("motivation-text");
+
+    if (totalAmountEl) {
+        const shouldHide = Boolean(window.__esquemaAhorroHideTotal);
+        totalAmountEl.textContent = shouldHide ? "Saldo oculto" : formatCurrency(total);
+        if (!shouldHide) {
+            totalAmountEl.classList.remove("bump");
+            void totalAmountEl.offsetWidth;
+            totalAmountEl.classList.add("bump");
+        }
+    }
+
+    const percentage = Math.max(
+        0,
+        Math.min(100, (total / SAVING_CONFIG.goal) * 100)
+    );
+
+    if (progressFillEl) {
+        progressFillEl.style.width = `${percentage}%`;
+    }
+    if (progressPercentEl) {
+        progressPercentEl.textContent = `${percentage.toFixed(0)}%`;
+    }
+    if (motivationEl) {
+        motivationEl.textContent = getMotivationText(percentage);
+    }
+
+    updateSectionSummaries();
+}
+
+function updateTotalVisibilityButton() {
+    const btn = document.getElementById("toggle-total-visibility");
+    if (!btn) return;
+    const hidden = Boolean(window.__esquemaAhorroHideTotal);
+    btn.textContent = hidden ? "Mostrar" : "Ocultar";
+    btn.setAttribute("aria-pressed", hidden ? "true" : "false");
+    btn.setAttribute("aria-label", hidden ? "Mostrar saldo total" : "Ocultar saldo total");
+}
+
+function attachTotalVisibilityListener(state) {
+    const btn = document.getElementById("toggle-total-visibility");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+        state.hideTotal = !state.hideTotal;
+        window.__esquemaAhorroHideTotal = state.hideTotal;
+        saveState(state);
+
+        updateTotalVisibilityButton();
+        updateUI(calculateTotalFromDOM());
+    });
+}
+
+function playFallbackCashSound() {
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) return;
+
+    try {
+        if (!window.__esquemaAhorroAudioCtx) {
+            window.__esquemaAhorroAudioCtx = new AudioContextCtor();
+        }
+        const ctx = window.__esquemaAhorroAudioCtx;
+
+        if (ctx.state === "suspended") {
+            ctx.resume().catch(() => {});
+        }
+
+        const now = ctx.currentTime;
+
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-22, now);
+        compressor.knee.setValueAtTime(18, now);
+        compressor.ratio.setValueAtTime(6, now);
+        compressor.attack.setValueAtTime(0.003, now);
+        compressor.release.setValueAtTime(0.12, now);
+        compressor.connect(ctx.destination);
+
+        const master = ctx.createGain();
+        master.gain.setValueAtTime(0.9, now);
+        master.connect(compressor);
+
+        // Ruido corto (moneda / "clink")
+        const noiseDur = 0.06;
+        const noiseBuf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * noiseDur)), ctx.sampleRate);
+        const data = noiseBuf.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            // ruido con caída rápida
+            const t = i / data.length;
+            data[i] = (Math.random() * 2 - 1) * (1 - t) * 0.7;
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuf;
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = "bandpass";
+        noiseFilter.frequency.setValueAtTime(2800, now);
+        noiseFilter.Q.setValueAtTime(10, now);
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.0001, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.22, now + 0.006);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + noiseDur);
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(master);
+        noise.start(now);
+        noise.stop(now + noiseDur);
+
+        // "Ka" corto (golpe)
+        const ka = ctx.createOscillator();
+        ka.type = "square";
+        const kaGain = ctx.createGain();
+        kaGain.gain.setValueAtTime(0.0001, now);
+        kaGain.gain.exponentialRampToValueAtTime(0.12, now + 0.008);
+        kaGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+        ka.frequency.setValueAtTime(520, now);
+        ka.frequency.exponentialRampToValueAtTime(220, now + 0.05);
+        ka.connect(kaGain);
+        kaGain.connect(master);
+        ka.start(now);
+        ka.stop(now + 0.055);
+
+        // "Ching" (campanita más aguda)
+        const t2 = now + 0.045;
+        const ch1 = ctx.createOscillator();
+        ch1.type = "sine";
+        const ch2 = ctx.createOscillator();
+        ch2.type = "triangle";
+        const chGain = ctx.createGain();
+        chGain.gain.setValueAtTime(0.0001, t2);
+        chGain.gain.exponentialRampToValueAtTime(0.16, t2 + 0.01);
+        chGain.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.25);
+
+        ch1.frequency.setValueAtTime(1650, t2);
+        ch1.frequency.exponentialRampToValueAtTime(980, t2 + 0.22);
+        ch2.frequency.setValueAtTime(990, t2);
+        ch2.frequency.exponentialRampToValueAtTime(660, t2 + 0.22);
+
+        const chFilter = ctx.createBiquadFilter();
+        chFilter.type = "highpass";
+        chFilter.frequency.setValueAtTime(450, t2);
+
+        ch1.connect(chGain);
+        ch2.connect(chGain);
+        chGain.connect(chFilter);
+        chFilter.connect(master);
+
+        ch1.start(t2);
+        ch2.start(t2);
+        ch1.stop(t2 + 0.26);
+        ch2.stop(t2 + 0.26);
+    } catch {
+        // Si falla el WebAudio, simplemente no sonamos.
+    }
+}
+
+function playCashSound() {
+    const audio = document.getElementById("cash-sound");
+
+    if (!audio) {
+        playFallbackCashSound();
+        return;
+    }
+
+    try {
+        audio.currentTime = 0;
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+            playPromise.catch(() => {
+                playFallbackCashSound();
+            });
+        }
+    } catch {
+        playFallbackCashSound();
+    }
+}
+
+function spawnDollarBurst(tile) {
+    const rect = tile.getBoundingClientRect();
+    const dollar = document.createElement("div");
+    dollar.className = "dollar-float";
+    dollar.textContent = "$";
+    dollar.style.left = `${rect.left + rect.width / 2}px`;
+    dollar.style.top = `${rect.top + rect.height / 2}px`;
+    document.body.appendChild(dollar);
+
+    dollar.addEventListener("animationend", () => {
+        dollar.remove();
+    });
+}
+
+function attachTileListeners(state) {
+    const container = document.body;
+
+    container.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        const tile = target.closest(".bill-tile");
+        if (!tile) return;
+
+        const tileId = tile.dataset.tileId;
+        const value = Number(tile.dataset.value || 0);
+        if (!tileId || Number.isNaN(value)) return;
+
+        const isActive = tile.classList.contains("active");
+
+        if (isActive) {
+            if (!confirm("¿Seguro que quieres desmarcar este billete? Se restará del total ahorrado.")) {
+                return;
+            }
+            tile.classList.remove("active");
+            tile.classList.add("inactive");
+            delete state.activeTiles[tileId];
+        } else {
+            tile.classList.add("active");
+            tile.classList.remove("inactive");
+            state.activeTiles[tileId] = true;
+            tile.classList.add("just-activated");
+            setTimeout(() => {
+                tile.classList.remove("just-activated");
+            }, 240);
+            playCashSound();
+            spawnDollarBurst(tile);
+        }
+
+        const total = calculateTotalFromDOM();
+        updateUI(total);
+        saveState(state);
+    });
+}
+
+function attachResetListener(state) {
+    const resetButton = document.getElementById("reset-button");
+    if (!resetButton) return;
+
+    resetButton.addEventListener("click", () => {
+        if (!confirm("¿Seguro que quieres reiniciar todo el progreso de ahorro?")) {
+            return;
+        }
+
+        state.activeTiles = {};
+        state.billOrder = null;
+
+        const grid = document.getElementById("all-bills-grid");
+        if (grid) {
+            grid.innerHTML = "";
+            buildTiles(state);
+        }
+
+        updateUI(0);
+        saveState(state);
+    });
+}
+
+function applyCustomCashSoundFromState(state) {
+    const audio = document.getElementById("cash-sound");
+    if (!audio) return;
+
+    if (state.cashSoundDataUrl) {
+        audio.src = state.cashSoundDataUrl;
+        try {
+            audio.load();
+        } catch {
+            // ignore
+        }
+    } else {
+        audio.src = "cash.mp3";
+        try {
+            audio.load();
+        } catch {
+            // ignore
+        }
+    }
+}
+
+function attachSoundPickerListeners(state) {
+    const fileInput = document.getElementById("cash-sound-file");
+    const pickBtn = document.getElementById("pick-sound-button");
+    const testBtn = document.getElementById("test-sound-button");
+    const resetBtn = document.getElementById("reset-sound-button");
+
+    if (!(fileInput instanceof HTMLInputElement)) return;
+    if (!pickBtn || !testBtn || !resetBtn) return;
+
+    pickBtn.addEventListener("click", () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener("change", () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        // Evitar reventar localStorage con archivos enormes.
+        const maxBytes = 900_000; // ~0.9MB
+        if (file.size > maxBytes) {
+            alert("Ese audio es muy pesado. Usa uno más corto/liviano (ideal < 1MB).");
+            fileInput.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result;
+            if (typeof result !== "string") return;
+
+            state.cashSoundDataUrl = result;
+            saveState(state);
+            applyCustomCashSoundFromState(state);
+
+            // prueba rápida
+            playCashSound();
+        };
+        reader.onerror = () => {
+            alert("No se pudo leer el archivo de audio.");
+        };
+        reader.readAsDataURL(file);
+    });
+
+    testBtn.addEventListener("click", () => {
+        playCashSound();
+    });
+
+    resetBtn.addEventListener("click", () => {
+        state.cashSoundDataUrl = null;
+        saveState(state);
+        applyCustomCashSoundFromState(state);
+        fileInput.value = "";
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const state = loadState();
+    window.__esquemaAhorroHideTotal = state.hideTotal;
+
+    applyCustomCashSoundFromState(state);
+
+    buildTiles(state);
+    attachTileListeners(state);
+    attachResetListener(state);
+    attachTotalVisibilityListener(state);
+    attachSoundPickerListeners(state);
+
+    const initialTotal = calculateTotalFromDOM();
+    updateUI(initialTotal);
+    updateTotalVisibilityButton();
+    updateSectionSummaries();
+    updateTodayDate();
+    updateDailyGoalDisplay();
 });
-
-/* Main loop */
-let last = performance.now();
-function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
-  last = now;
-  updateCursorParticles(dt);
-  spawnConfettiRain(dt);
-  updateConfetti(dt);
-  updateFireworks(dt);
-  requestAnimationFrame(frame);
-}
-
-/* Init */
-function init() {
-  resizeCanvases();
-  spawnSparkles(28);
-  spawnBalloons(12);
-  setupGalleryReveal();
-  applyAutoTheme();
-  // Set confetti rain rate based on viewport size (more pink confetti)
-  const baseRate = 55; // per second baseline, increased for fuller effect
-  const areaFactor = Math.min(1.8, Math.max(0.8, (window.innerWidth * window.innerHeight) / (1280 * 720)));
-  confettiRainRate = baseRate * areaFactor;
-  window.addEventListener('resize', resizeCanvases);
-  requestAnimationFrame(frame);
-}
-
-document.addEventListener('DOMContentLoaded', init);
-
-/* Gifts rain + confetti boost */
-function rainGiftsAndBoostConfetti() {
-  const durationMs = 4500;
-  const endAt = performance.now() + durationMs;
-  const originalRate = confettiRainRate;
-  confettiRainRate = originalRate * 2.5; // temporary boost
-  const emojiOptions = ['🎁','🎀','💝','🍰','🎈','🌟'];
-
-  function spawnGift() {
-    if (!giftsContainer) return;
-    const g = document.createElement('div');
-    g.className = 'gift';
-    g.style.left = `${Math.random() * (window.innerWidth - 42)}px`;
-    g.style.top = `-60px`;
-    g.style.animationDuration = `${rand(3.2, 5.5)}s`;
-    g.style.animationDelay = '0s';
-    const s = document.createElement('span');
-    s.textContent = emojiOptions[Math.floor(Math.random() * emojiOptions.length)];
-    g.appendChild(s);
-    giftsContainer.appendChild(g);
-    setTimeout(() => g.remove(), 7000);
-  }
-
-  // Spawn gifts frequently during the window
-  const spawnInterval = setInterval(spawnGift, 120);
-  // Stop and restore confetti after duration
-  setTimeout(() => {
-    clearInterval(spawnInterval);
-    confettiRainRate = originalRate;
-  }, durationMs);
-}
-
-

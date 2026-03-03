@@ -1,117 +1,78 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Feliz Cumpleaños</title>
-    <meta name="description" content="Página sorpresa de cumpleaños" />
-    <!-- TailwindCSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="./styles.css" />
-    <!-- Favicon (optional) -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎂</text></svg>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esquema de Ahorro - Meta 5.000.000</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="min-h-screen overflow-x-hidden selection:bg-pink-200/60 selection:text-pink-900">
-    <!-- Welcome Overlay -->
-    <div id="welcome-overlay" class="fixed inset-0 z-50 flex items-center justify-center px-6">
-        <div class="overlay-card text-center">
-            <h2 class="font-display text-5xl sm:text-6xl title-glow">¡Feliz Cumpleaños Mami!</h2>
-            <p class="mt-3 font-display text-3xl text-rose-500">
-                 Eres mi fuerza y mi luz.  
-                ¡Te amo con el alma! 💖
-                </p>
-            
-                <button id="start-button" class="mt-6 btn-magic">💝 Abrir 🎉</button>
-
+<body>
+    <header class="app-header">
+        <div>
+            <h1>💸Esquema de Ahorro</h1>
         </div>
-    </div>
-    <!-- Animated gradient background + particles canvas -->
-    <div id="bg-gradient" class="fixed inset-0 -z-20"></div>
-    <canvas id="canvas-confetti" class="fixed inset-0 -z-10 pointer-events-none"></canvas>
-    <canvas id="canvas-fireworks" class="fixed inset-0 -z-10 pointer-events-none hidden"></canvas>
-    <canvas id="canvas-cursor" class="fixed inset-0 -z-10 pointer-events-none"></canvas>
-
-    <!-- Floating sparkles container -->
-    <div id="sparkles" class="pointer-events-none fixed inset-0 -z-10"></div>
-
-    <!-- Floating balloons -->
-    <div id="balloons" class="pointer-events-none fixed inset-0 -z-10"></div>
-
-    <!-- Header / Hero -->
-    <header class="relative flex items-center justify-center text-center px-4 pt-20 pb-10 sm:pt-28">
-        <div class="max-w-3xl">
-            <h1 id="main-title" class="font-display text-5xl sm:text-6xl md:text-7xl text-center drop-shadow title-glow">
-                ¡Feliz Cumpleaños Mamá!
-            </h1>
-            <p class="mt-4 text-lg sm:text-xl text-emphasis">
-                Hoy celebramos tu luz, tu fuerza y todo el amor que nos das.
-            </p>
-            <div class="mt-8 flex items-center justify-center gap-3">
-                <button id="magic-button" class="btn-magic">
-                    🎁 ¡Haz clic para tu sorpresa!
-                </button>
-                <button id="music-button" class="btn-secondary" title="Reproducir música">
-                    ♪ Música
-                </button>
+        <div class="goal-panel">
+            <div class="goal-row">
+                <span class="label">Ahorrado:</span>
+                    <div class="value total-value">
+                        <span id="total-amount" class="value-amount">$0</span>
+                        <button
+                            id="toggle-total-visibility"
+                            class="toggle-total-btn"
+                            type="button"
+                            aria-pressed="false"
+                            aria-label="Ocultar saldo total"
+                        >
+                            Ocultar
+                        </button>
+                    </div>
             </div>
+            <div class="goal-row">
+                <span class="label">Meta:</span>
+                <span class="value">$5.000.000</span>
+            </div>
+            <div class="goal-row goal-daily">
+                <span class="label">Plan (7 meses):</span>
+                <span id="daily-goal" class="value"></span>
+            </div>
+            <div class="goal-row">
+                <span class="label">Hoy:</span>
+                <span id="today-date" class="value"></span>
+            </div>
+            <div class="progress-wrapper">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <span id="progress-percent" class="progress-percent">0%</span>
+            </div>
+            <p id="motivation-text" class="motivation-text">
+                Empieza marcando tu primer billete y mira cómo crece tu ahorro.
+            </p>
         </div>
     </header>
 
-    <!-- Hidden special message -->
-    <section class="px-4 py-6">
-        <div class="max-w-3xl mx-auto">
-            <div id="special-message" class="hidden rounded-xl p-5 glass-card">
-                <h2 class="font-display text-3xl sm:text-4xl mb-3">Para ti, con todo mi corazón</h2>
-                <p id="typewriter" class="text-lg leading-relaxed"></p>
+    <main class="app-main">
+        <section class="denomination-section">
+            <div class="section-header">
+                <h2>Todos los billetes mezclados</h2>
+                <span class="section-summary" id="overall-summary">0 billetes ahorrados</span>
             </div>
-        </div>
-    </section>
+            <div class="bills-grid bills-mixed" id="all-bills-grid"></div>
+        </section>
+    </main>
 
-    <!-- Surprise gallery -->
-    <section class="px-4 py-6">
-        <div class="max-w-5xl mx-auto">
-            <h3 class="font-display text-3xl sm:text-4xl text-center mb-6">Nuestros recuerdos</h3>
-            <div id="gallery" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Images populated by HTML for simplicity; animated via CSS/JS -->
-                <figure class="gallery-item"><img loading="lazy" src="./img/foto3.jpeg" alt="Flores" /></figure>
-                <figure class="gallery-item"><img loading="lazy" src="./img/foto5.jpeg" alt="Alegría" /></figure>                
-                <figure class="gallery-item"><img loading="lazy" src="./img/foto1.jpeg" alt="Celebración" /></figure>
-                <figure class="gallery-item"><img loading="lazy" src="./img/foto4.jpeg" alt="Recuerdo" /></figure>
-                <figure class="gallery-item"><img loading="lazy" src="./img/foto2.jpeg" alt="Pastel" /></figure>
-                <figure class="gallery-item"><img loading="lazy" src="./img/foto6.jpeg" alt="Pastel" /></figure>
-               
-                
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="px-4 py-10">
-        <div class="max-w-3xl mx-auto text-center">
-            <p class="text-emphasis">
-                Con mucho amor, de 
-                 <span class="font-semibold">tu hijo Isaac 💖</span>
-            </p>
+    <footer class="app-footer">
+        <button id="reset-button" class="reset-button">Reiniciar progreso</button>
+        <div class="sound-controls">
+            <input id="cash-sound-file" type="file" accept="audio/*" class="sound-file-input" />
+            <button id="pick-sound-button" class="sound-button" type="button">Elegir sonido</button>
+            <button id="test-sound-button" class="sound-button secondary" type="button">Probar</button>
+            <button id="reset-sound-button" class="sound-button secondary" type="button">Restaurar</button>
         </div>
     </footer>
 
-    <!-- YouTube Background (hidden) -->
-    <div class="fixed bottom-4 right-4 z-10">
-        <div id="player" class="hidden"></div>
-    </div>
-
-    <!-- Hearts container for click effect -->
-    <div id="hearts" class="fixed inset-0 pointer-events-none"></div>
-    <!-- Gifts container for magic rain -->
-    <div id="gifts" class="fixed inset-0 pointer-events-none z-10"></div>
-
-    <!-- Scripts -->
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="./script.js"></script>
+    <audio id="cash-sound" src="cash.mp3" preload="auto"></audio>
+    
+    <script src="script.js"></script>
 </body>
 </html>
-
-
